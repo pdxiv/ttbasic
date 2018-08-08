@@ -4,6 +4,19 @@
 	Build: cc ttbasic.c basic.c -o ttbasic
 */
 
+/*
+TO DO:
+The following variables use pointer arithmetic, which is probably a bad idea if
+you want to convert the code to another language:
+  current_icode
+  current_line
+  ip
+  line_pointer
+  keyword_pointer
+  character_in_line_buffer_pointer
+  top_of_command_line
+*/
+
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -247,7 +260,7 @@ char c_isprint(char c) {return(c >= 32 && c <= 126);}
 char c_isspace(char c) {return(c == ' ' || (c <= 13 && c >= 9));}
 char c_isdigit(char c) {return(c <= '9' && c >= '0');}
 char c_isalpha(char c) {return ((c <= 'z' && c >= 'a') || (c <= 'Z' && c >= 'A'));}
-void c_puts(const char *s) {while(*s) c_putch(*s++);}
+void c_puts(const char *character_in_line_buffer_pointer) {while(*character_in_line_buffer_pointer) c_putch(*character_in_line_buffer_pointer++);}
 void c_gets(){
 	char c;
 	unsigned char len;
@@ -360,28 +373,28 @@ short input_numeric_and_return_value(){
 unsigned char convert_token_to_icode() {
 	unsigned char i; // Loop counter(i-code sometime)
 	unsigned char len = 0; // byte counter
-	char* pkw = 0; // Temporary keyword pointer
+	char* keyword_pointer = 0; // Temporary keyword pointer
 	char* top_of_command_line; // Temporary token pointer
-	char* s = command_line_buffer; // Pointer to charactor at line buffer
+	char* character_in_line_buffer_pointer = command_line_buffer; // Pointer to character in line buffer
 	char c; // Surround the string character, " or '
 	short value; // numeric
 	short tmp; // numeric for overflow check
 
-	while (*s) {
-		while (c_isspace(*s)) s++; // Skip space
+	while (*character_in_line_buffer_pointer) {
+		while (c_isspace(*character_in_line_buffer_pointer)) character_in_line_buffer_pointer++; // Skip space
 
 		// Try keyword conversion
 		for (i = 0; i < SIZE_KEYWORD_TABLE; i++) {
-			pkw = (char *)keyword_table[i]; // Point keyword
-			top_of_command_line = s; // Point top of command line
+			keyword_pointer = (char *)keyword_table[i]; // Point keyword
+			top_of_command_line = character_in_line_buffer_pointer; // Point top of command line
 
 			// Compare 1 keyword
-			while ((*pkw != 0) && (*pkw == c_toupper(*top_of_command_line))) {
-				pkw++;
+			while ((*keyword_pointer != 0) && (*keyword_pointer == c_toupper(*top_of_command_line))) {
+				keyword_pointer++;
 				top_of_command_line++;
 			}
 
-			if (*pkw == 0) {// Case success
+			if (*keyword_pointer == 0) {// Case success
 
 				if (len >= SIZE_IBUFFER - 1) {// List area full
 					err = ERR_IBUFOF;
@@ -390,15 +403,15 @@ unsigned char convert_token_to_icode() {
 
 				// i have i-code
 				icode_conversion_buffer[len++] = i;
-				s = top_of_command_line;
+				character_in_line_buffer_pointer = top_of_command_line;
 				break;
 			}
 		}
 
 		// Case statement needs an argument except numeric, variable, or strings
 		if(i == I_REM) {
-			while (c_isspace(*s)) s++; // Skip space
-			top_of_command_line = s;
+			while (c_isspace(*character_in_line_buffer_pointer)) character_in_line_buffer_pointer++; // Skip space
+			top_of_command_line = character_in_line_buffer_pointer;
 			for (i = 0; *top_of_command_line++; i++); // Get length
 			if (len >= SIZE_IBUFFER - 2 - i) {
 				err = ERR_IBUFOF;
@@ -406,15 +419,15 @@ unsigned char convert_token_to_icode() {
 			}
 			icode_conversion_buffer[len++] = i; // Put length
 			while (i--) { // Copy strings
-				icode_conversion_buffer[len++] = *s++;
+				icode_conversion_buffer[len++] = *character_in_line_buffer_pointer++;
 			}
 			break;
 		}
 
-		if (*pkw == 0)
+		if (*keyword_pointer == 0)
 			continue;
 
-		top_of_command_line = s; // Point top of command line
+		top_of_command_line = character_in_line_buffer_pointer; // Point top of command line
 
 		// Try numeric conversion
 		if (c_isdigit(*top_of_command_line)) {
@@ -436,14 +449,14 @@ unsigned char convert_token_to_icode() {
 			icode_conversion_buffer[len++] = I_NUM;
 			icode_conversion_buffer[len++] = value & 255;
 			icode_conversion_buffer[len++] = value >> 8;
-			s = top_of_command_line;
+			character_in_line_buffer_pointer = top_of_command_line;
 		}
 		else
 
 		// Try string conversion
-		if (*s == '\"' || *s == '\'') { // If start of string
-			c = *s++;
-			top_of_command_line = s;
+		if (*character_in_line_buffer_pointer == '\"' || *character_in_line_buffer_pointer == '\'') { // If start of string
+			c = *character_in_line_buffer_pointer++;
+			top_of_command_line = character_in_line_buffer_pointer;
 			for (i = 0; (*top_of_command_line != c) && c_isprint(*top_of_command_line); i++) // Get length
 				top_of_command_line++;
 			if (len >= SIZE_IBUFFER - 1 - i) { // List area full
@@ -453,9 +466,9 @@ unsigned char convert_token_to_icode() {
 			icode_conversion_buffer[len++] = I_STR; // Put i-code
 			icode_conversion_buffer[len++] = i; // Put length
 			while (i--) { // Put string
-				icode_conversion_buffer[len++] = *s++;
+				icode_conversion_buffer[len++] = *character_in_line_buffer_pointer++;
 			}
-			if (*s == c) s++; // Skip " or '
+			if (*character_in_line_buffer_pointer == c) character_in_line_buffer_pointer++; // Skip " or '
 		}
 		else
 
@@ -471,7 +484,7 @@ unsigned char convert_token_to_icode() {
 			}
 			icode_conversion_buffer[len++] = I_VAR; // Put i-code
 			icode_conversion_buffer[len++] = c_toupper(*top_of_command_line) - 'A'; // Put index of variable area
-			s++;
+			character_in_line_buffer_pointer++;
 		}
 		else
 
@@ -486,28 +499,28 @@ unsigned char convert_token_to_icode() {
 }
 
 // Get line numbere by line pointer
-short get_line_number_by_line_pointer(unsigned char *lp) {
-	if(*lp == 0) // end of list
+short get_line_number_by_line_pointer(unsigned char *line_pointer) {
+	if(*line_pointer == 0) // end of list
 		return 32767; // max line bumber
-	return *(lp + 1) | *(lp + 2) << 8;
+	return *(line_pointer + 1) | *(line_pointer + 2) << 8;
 }
 
 // Search line by line number
 unsigned char* search_line_by_line_number(short line_number) {
-	unsigned char *lp;
+	unsigned char *line_pointer;
 
-	for (lp = list_area; *lp; lp += *lp)
-		if (get_line_number_by_line_pointer(lp) >= line_number)
+	for (line_pointer = list_area; *line_pointer; line_pointer += *line_pointer)
+		if (get_line_number_by_line_pointer(line_pointer) >= line_number)
 			break;
-	return lp;
+	return line_pointer;
 }
 
 // Return free memory size
 short return_free_memory_size() {
-	unsigned char* lp;
+	unsigned char* line_pointer;
 
-	for (lp = list_area; *lp; lp += *lp);
-	return list_area + SIZE_LIST_BUFFER - lp - 1;
+	for (line_pointer = list_area; *line_pointer; line_pointer += *line_pointer);
+	return list_area + SIZE_LIST_BUFFER - line_pointer - 1;
 }
 
 // Insert i-code to the list
@@ -989,7 +1002,7 @@ void i_let_handler() {
 // Execute a series of i-code
 unsigned char* i_execute_a_series_of_icode() {
 	short line_number; // line number
-	unsigned char* lp; // temporary line pointer
+	unsigned char* line_pointer; // temporary line pointer
 	short index, vto, vstep; // FOR-NEXT items
 	short condition; // IF condition
 
@@ -1008,13 +1021,13 @@ unsigned char* i_execute_a_series_of_icode() {
 			line_number = i_the_parser(); // get line number
 			if (err)
 				break;
-			lp = search_line_by_line_number(line_number); // search line
-			if (line_number != get_line_number_by_line_pointer(lp)) { // if not found
+			line_pointer = search_line_by_line_number(line_number); // search line
+			if (line_number != get_line_number_by_line_pointer(line_pointer)) { // if not found
 				err = ERR_ULN;
 				break;
 			}
 
-			current_line = lp; // update line pointer
+			current_line = line_pointer; // update line pointer
 			current_icode = current_line + 3; // update i-code pointer
 			break;
 
@@ -1023,8 +1036,8 @@ unsigned char* i_execute_a_series_of_icode() {
 			line_number = i_the_parser(); // get line number
 			if (err)
 				break;
-			lp = search_line_by_line_number(line_number); // search line
-			if (line_number != get_line_number_by_line_pointer(lp)) { // if not found
+			line_pointer = search_line_by_line_number(line_number); // search line
+			if (line_number != get_line_number_by_line_pointer(line_pointer)) { // if not found
 				err = ERR_ULN;
 				break;
 			}
@@ -1037,7 +1050,7 @@ unsigned char* i_execute_a_series_of_icode() {
 			gosub_stack[gosub_stack_index++] = current_line; // push line pointer
 			gosub_stack[gosub_stack_index++] = current_icode; // push i-code pointer
 
-			current_line = lp; // update line pointer
+			current_line = line_pointer; // update line pointer
 			current_icode = current_line + 3; // update i-code pointer
 			break;
 
@@ -1200,7 +1213,7 @@ unsigned char* i_execute_a_series_of_icode() {
 
 // RUN command handler
 void i_run_command_handler() {
-	unsigned char* lp;
+	unsigned char* line_pointer;
 
 	gosub_stack_index = 0;
 	for_stack_index = 0;
@@ -1208,10 +1221,10 @@ void i_run_command_handler() {
 
 	while (*current_line) {		
 		current_icode = current_line + 3;		
-		lp = i_execute_a_series_of_icode();
+		line_pointer = i_execute_a_series_of_icode();
 		if (err)
 			return;
-		current_line = lp;
+		current_line = line_pointer;
 	}
 }
 
