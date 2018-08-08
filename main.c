@@ -358,7 +358,7 @@ short input_numeric_and_return_value(){
 
 // Convert token to i-code
 // Return byte length or 0
-unsigned char toktoi() {
+unsigned char convert_token_to_icode() {
 	unsigned char i; // Loop counter(i-code sometime)
 	unsigned char len = 0; // byte counter
 	char* pkw = 0; // Temporary keyword pointer
@@ -1238,7 +1238,7 @@ void i_list_handler() {
 }
 
 // NEW command handler
-void inew(void) {
+void i_new_command_handler(void) {
 	unsigned char i;
 
 	for (i = 0; i < 26; i++)
@@ -1251,14 +1251,14 @@ void inew(void) {
 	current_line = listbuf;
 }
 
-// Command precessor
-void icom() {
+// Command processor
+void i_command_processor() {
 	current_icode = icode_conversion_buffer;
 	switch (*current_icode) {
 	case I_NEW:
 		current_icode++;
 		if (*current_icode == I_EOL)
-			inew();
+			i_new_command_handler();
 		else
 			err = ERR_SYNTAX;
 		break;
@@ -1311,7 +1311,7 @@ The BASIC entry point
 void basic(){
 	unsigned char len;
 
-	inew();
+	i_new_command_handler();
 	c_puts("TOYOSHIKI TINY BASIC"); newline();
 	c_puts(STR_EDITION);
 	c_puts(" EDITION"); newline();
@@ -1321,16 +1321,18 @@ void basic(){
 	while(1){
 		c_putch('>'); // Prompt
 		c_gets(); // Input 1 line
-		len = toktoi(); // Convert token to i-code
+		len = convert_token_to_icode(); // Convert token to i-code
 		if(err){ // Error
 			error();
 			continue; // Do nothing
 		}
 
+		// Quit if i-code is "SYSTEM"
 		if(*icode_conversion_buffer == I_SYSTEM){
 			return;
 		}
 
+		// If the line starts with a number, store i-code in list
 		if(*icode_conversion_buffer == I_NUM){ // Case the top includes line number
 			*icode_conversion_buffer = len; // Change I_NUM to byte length
 			insert_icode_to_the_list_preconditions(); // Insert list
@@ -1339,7 +1341,8 @@ void basic(){
 			continue;
 		}
 
-		icom(); // Execute direct
+		// Simply execude the code in the the entered statement
+		i_command_processor(); // Execute direct
 		error(); // Print OK, and Clear error flag
 	}
 }
