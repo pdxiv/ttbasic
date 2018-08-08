@@ -20,7 +20,6 @@ int main(){
 	return 0;
 }
 
-
 // Compiler requires description
 
 // TOYOSHIKI TinyBASIC symbols
@@ -102,45 +101,45 @@ const char* keyword_table[] = {
 
 // i-code(Intermediate code) assignment
 enum{
-	I_GOTO,
-	I_GOSUB,
-	I_RETURN,
-	I_FOR,
-	I_TO,
-	I_STEP,
-	I_NEXT,
-	I_IF,
-	I_REM,
-	I_STOP,
-	I_INPUT,
-	I_PRINT,
-	I_LET,
-	I_COMMA,
-	I_SEMI,
-	I_MINUS,
-	I_PLUS,
-	I_MUL,
-	I_DIV,
-	I_OPEN,
-	I_CLOSE,
-	I_GTE,
-	I_SHARP,
-	I_GT,
-	I_EQ,
-	I_LTE,
-	I_LT,
-	I_ARRAY,
-	I_RND,
-	I_ABS,
-	I_SIZE,
-	I_LIST,
-	I_RUN,
-	I_NEW,
-	I_SYSTEM,
-	I_NUM,
-	I_VAR,
-	I_STR,
-	I_EOL
+	I_GOTO,   // 0 GOTO
+	I_GOSUB,  // 1
+	I_RETURN, // 2
+	I_FOR,    // 3
+	I_TO,     // 4
+	I_STEP,   // 5
+	I_NEXT,   // 6
+	I_IF,     // 7
+	I_REM,    // 8
+	I_STOP,   // 9
+	I_INPUT,  // 10
+	I_PRINT,  // 11 PRINT
+	I_LET,    // 12
+	I_COMMA,  // 13
+	I_SEMI,   // 14 Semicolon
+	I_MINUS,  // 15
+	I_PLUS,   // 16
+	I_MUL,    // 17
+	I_DIV,    // 18
+	I_OPEN,   // 19
+	I_CLOSE,  // 20
+	I_GTE,    // 21
+	I_SHARP,  // 22
+	I_GT,     // 23
+	I_EQ,     // 24
+	I_LTE,    // 25
+	I_LT,     // 26
+	I_ARRAY,  // 27
+	I_RND,    // 28
+	I_ABS,    // 29
+	I_SIZE,   // 30
+	I_LIST,   // 31
+	I_RUN,    // 32
+	I_NEW,    // 33
+	I_SYSTEM, // 34
+	I_NUM,    // 35
+	I_VAR,    // 36 Variable
+	I_STR,    // 37
+	I_EOL     // 38
 };
 
 // Keyword count
@@ -234,7 +233,7 @@ char command_line_buffer[SIZE_LINE_COMMAND]; // Command line buffer
 unsigned char icode_conversion_buffer[SIZE_IBUFFER]; // i-code conversion buffer
 short variable_area[26]; // Variable area
 short array_area[SIZE_ARRAY_AREA]; // Array area
-unsigned char listbuf[SIZE_LIST_BUFFER]; // List area
+unsigned char list_area[SIZE_LIST_BUFFER]; // List area
 unsigned char* current_line; // Pointer current line
 unsigned char* current_icode; // Pointer current Intermediate code
 unsigned char* gosub_stack[SIZE_GOSUB_STACK]; // GOSUB stack
@@ -476,7 +475,7 @@ unsigned char convert_token_to_icode() {
 		}
 		else
 
-		// Nothing mutch
+		// Nothing much
 		{
 			err = ERR_SYNTAX;
 			return 0;
@@ -497,7 +496,7 @@ short get_line_number_by_line_pointer(unsigned char *lp) {
 unsigned char* search_line_by_line_number(short line_number) {
 	unsigned char *lp;
 
-	for (lp = listbuf; *lp; lp += *lp)
+	for (lp = list_area; *lp; lp += *lp)
 		if (get_line_number_by_line_pointer(lp) >= line_number)
 			break;
 	return lp;
@@ -507,8 +506,8 @@ unsigned char* search_line_by_line_number(short line_number) {
 short return_free_memory_size() {
 	unsigned char* lp;
 
-	for (lp = listbuf; *lp; lp += *lp);
-	return listbuf + SIZE_LIST_BUFFER - lp - 1;
+	for (lp = list_area; *lp; lp += *lp);
+	return list_area + SIZE_LIST_BUFFER - lp - 1;
 }
 
 // Insert i-code to the list
@@ -1000,8 +999,8 @@ unsigned char* i_execute_a_series_of_icode() {
 			if (c_getch() == 27) { // ESC ?
 				err = ERR_ESC;
 				return NULL;
-			}
-
+			}        
+        
 		switch (*current_icode) {
 
 		case I_GOTO:
@@ -1200,15 +1199,15 @@ unsigned char* i_execute_a_series_of_icode() {
 }
 
 // RUN command handler
-void irun() {
+void i_run_command_handler() {
 	unsigned char* lp;
 
 	gosub_stack_index = 0;
 	for_stack_index = 0;
-	current_line = listbuf;
+	current_line = list_area;
 
-	while (*current_line) {
-		current_icode = current_line + 3;
+	while (*current_line) {		
+		current_icode = current_line + 3;		
 		lp = i_execute_a_series_of_icode();
 		if (err)
 			return;
@@ -1222,7 +1221,7 @@ void i_list_handler() {
 
 	line_number = (*current_icode == I_NUM) ? get_line_number_by_line_pointer(current_icode) : 0;
 
-	for (current_line = listbuf;
+	for (current_line = list_area;
 	*current_line && (get_line_number_by_line_pointer(current_line) < line_number);
 		current_line += *current_line);
 
@@ -1247,8 +1246,8 @@ void i_new_command_handler(void) {
 		array_area[i] = 0;
 	gosub_stack_index = 0;
 	for_stack_index = 0;
-	*listbuf = 0;
-	current_line = listbuf;
+	*list_area = 0;
+	current_line = list_area;
 }
 
 // Command processor
@@ -1271,7 +1270,7 @@ void i_command_processor() {
 		break;
 	case I_RUN:
 		current_icode++;
-		irun();
+		i_run_command_handler();
 		break;
 	default:
 		i_execute_a_series_of_icode();
@@ -1282,7 +1281,7 @@ void i_command_processor() {
 // Print OK or error message
 void error() {
 	if (err) {
-		if (current_icode >= listbuf && current_icode < listbuf + SIZE_LIST_BUFFER && *current_line)
+		if (current_icode >= list_area && current_icode < list_area + SIZE_LIST_BUFFER && *current_line)
 		{
 			newline();
 			c_puts("LINE:");
