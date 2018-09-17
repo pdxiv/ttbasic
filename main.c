@@ -499,11 +499,9 @@ unsigned char convert_token_to_icode()
 			icode_conversion_buffer[len++] = value >> 8;
 			character_in_line_buffer_pointer = top_of_command_line;
 		}
-		else
-
-			// Try string conversion
-			if (*character_in_line_buffer_pointer == '\"' || *character_in_line_buffer_pointer == '\'')
-		{ // If start of string
+		else if (*character_in_line_buffer_pointer == '\"' || *character_in_line_buffer_pointer == '\'') // Try string conversion
+		{
+			// If start of string
 			c = *character_in_line_buffer_pointer++;
 			top_of_command_line = character_in_line_buffer_pointer;
 			for (i = 0; (*top_of_command_line != c) && c_isprint(*top_of_command_line); i++) // Get length
@@ -522,10 +520,7 @@ unsigned char convert_token_to_icode()
 			if (*character_in_line_buffer_pointer == c)
 				character_in_line_buffer_pointer++; // Skip " or '
 		}
-		else
-
-			// Try conversion
-			if (c_isalpha(*top_of_command_line))
+		else if (c_isalpha(*top_of_command_line)) // Try conversion
 		{
 			if (len >= SIZE_IBUFFER - 2)
 			{
@@ -541,9 +536,7 @@ unsigned char convert_token_to_icode()
 			icode_conversion_buffer[len++] = c_toupper(*top_of_command_line) - 'A'; // Put index of variable area
 			character_in_line_buffer_pointer++;
 		}
-		else
-
-		// Nothing much
+		else // Nothing much
 		{
 			err = ERR_SYNTAX;
 			return 0;
@@ -655,10 +648,7 @@ void listing_1_line_of_icode(unsigned char *ip)
 			}
 			ip++;
 		}
-		else
-
-			// Case numeric
-			if (*ip == I_NUM)
+		else if (*ip == I_NUM) // Case numeric
 		{
 			ip++;
 			print_numeric_specified_columns(*ip | *(ip + 1) << 8, 0);
@@ -666,20 +656,14 @@ void listing_1_line_of_icode(unsigned char *ip)
 			if (!nospaceb(*ip))
 				c_putch(' ');
 		}
-		else
-
-			// Case variable
-			if (*ip == I_VAR)
+		else if (*ip == I_VAR) // Case variable
 		{
 			ip++;
 			c_putch(*ip++ + 'A');
 			if (!nospaceb(*ip))
 				c_putch(' ');
 		}
-		else
-
-			// Case string
-			if (*ip == I_STR)
+		else if (*ip == I_STR) // Case string
 		{
 			char c;
 
@@ -703,8 +687,7 @@ void listing_1_line_of_icode(unsigned char *ip)
 				c_putch(' ');
 		}
 
-		// Nothing match, I think, such case is impossible
-		else
+		else // Nothing match, I think, such case is impossible
 		{
 			err = ERR_SYS;
 			return;
