@@ -1,6 +1,6 @@
 # ttbasic
 
-A fork of TOYOSHIKI Tiny BASIC for Linux (https://github.com/vintagechips/ttbasic_lin)
+A fork of TOYOSHIKI Tiny BASIC for Linux (<https://github.com/vintagechips/ttbasic_lin>)
 
 To compile and run: `cc main.c -o main && ./main`
 
