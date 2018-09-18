@@ -21,7 +21,6 @@ you want to convert the code to another language:
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <termios.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -54,17 +53,8 @@ int main()
 
 char c_getch()
 {
-	struct termios b;
-	struct termios a;
 	char c;
-
-	tcgetattr(STDIN_FILENO, &b);
-	a = b;
-	a.c_lflag &= ~(ICANON | ECHO);
-	tcsetattr(STDIN_FILENO, TCSANOW, &a);
 	c = getchar();
-	tcsetattr(STDIN_FILENO, TCSANOW, &b);
-
 	return c;
 }
 
