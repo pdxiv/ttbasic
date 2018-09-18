@@ -44,19 +44,20 @@ int main()
 #define SIZE_GOSUB_STACK 6	// GOSUB stack size(2/nest)
 #define SIZE_LSTK 15		  // FOR stack size(5/nest)
 
+#define ASCII_SPACE 32
+#define ASCII_MAX_CHARACTER 127
+#define ASCII_BACKSPACE 8
+#define ASCII_TAB 9
+#define ASCII_CARRIAGE_RETURN 13
+
+#define MAX_BYTE_VALUE 255
+#define BITS_IN_BYTE 8
+
 // Depending on device functions
 // TO-DO Rewrite these functions to fit your machine
 #define STR_EDITION "LINUX"
 
 // Terminal control
-#define c_putch(c) putchar(c)
-
-char c_getch()
-{
-	char c;
-	c = getchar();
-	return c;
-}
 
 char c_kbhit(void)
 {
@@ -66,7 +67,7 @@ char c_kbhit(void)
 	f = fcntl(STDIN_FILENO, F_GETFL, 0);
 	fcntl(STDIN_FILENO, F_SETFL, f | O_NONBLOCK);
 
-	c = c_getch();
+	c = getchar();
 
 	fcntl(STDIN_FILENO, F_SETFL, f);
 
@@ -82,7 +83,7 @@ char c_kbhit(void)
 #define KEY_ENTER 10
 void newline(void)
 {
-	c_putch(KEY_ENTER); // LF
+	putchar(KEY_ENTER); // LF
 }
 
 // Return random number
@@ -249,15 +250,15 @@ unsigned char *for_stack[SIZE_LSTK];				 // FOR stack
 unsigned char for_stack_index;						 // FOR stack index
 
 // Standard C libraly (about) same functions
-char c_toupper(char c) { return (c <= 'z' && c >= 'a' ? c - 32 : c); }
-char c_isprint(char c) { return (c >= 32 && c <= 126); }
-char c_isspace(char c) { return (c == ' ' || (c <= 13 && c >= 9)); }
+char c_toupper(char c) { return (c <= 'z' && c >= 'a' ? c - ASCII_SPACE : c); }
+char c_isprint(char c) { return (c >= ASCII_SPACE && c < ASCII_MAX_CHARACTER); }
+char c_isspace(char c) { return (c == ' ' || (c <= ASCII_CARRIAGE_RETURN && c >= ASCII_TAB)); }
 char c_isdigit(char c) { return (c <= '9' && c >= '0'); }
 char c_isalpha(char c) { return ((c <= 'z' && c >= 'a') || (c <= 'Z' && c >= 'A')); }
 void c_puts(const char *character_in_line_buffer_pointer)
 {
 	while (*character_in_line_buffer_pointer)
-		c_putch(*character_in_line_buffer_pointer++);
+		putchar(*character_in_line_buffer_pointer++);
 }
 void c_gets()
 {
@@ -265,21 +266,21 @@ void c_gets()
 	unsigned char len;
 
 	len = 0;
-	while ((c = c_getch()) != KEY_ENTER)
+	while ((c = getchar()) != KEY_ENTER)
 	{
-		if (c == 9)
+		if (c == ASCII_TAB)
 			c = ' '; // TAB exchange Space
-		if (((c == 8) || (c == 127)) && (len > 0))
+		if (((c == ASCII_BACKSPACE) || (c == ASCII_MAX_CHARACTER)) && (len > 0))
 		{ // Backspace manipulation
 			len--;
-			c_putch(8);
-			c_putch(' ');
-			c_putch(8);
+			putchar(ASCII_BACKSPACE);
+			putchar(' ');
+			putchar(ASCII_BACKSPACE);
 		}
 		else if (c_isprint(c) && (len < (SIZE_LINE_COMMAND - 1)))
 		{
 			command_line_buffer[len++] = c;
-			c_putch(c);
+			putchar(c);
 		}
 	}
 	newline();
@@ -323,7 +324,7 @@ void print_numeric_specified_columns(short value, short d)
 	// String length = 6 - i
 	while (6 - i < d)
 	{				  // If short
-		c_putch(' '); // Fill space
+		putchar(' '); // Fill space
 		d--;
 	}
 	c_puts(&command_line_buffer[i]);
@@ -339,20 +340,20 @@ short input_numeric_and_return_value()
 	unsigned char sign;
 
 	len = 0;
-	while ((c = c_getch()) != KEY_ENTER)
+	while ((c = getchar()) != KEY_ENTER)
 	{
-		if (((c == 8) || (c == 127)) && (len > 0))
+		if (((c == ASCII_BACKSPACE) || (c == ASCII_MAX_CHARACTER)) && (len > 0))
 		{ // Backspace manipulation
 			len--;
-			c_putch(8);
-			c_putch(' ');
-			c_putch(8);
+			putchar(ASCII_BACKSPACE);
+			putchar(' ');
+			putchar(ASCII_BACKSPACE);
 		}
 		else if ((len == 0 && (c == '+' || c == '-')) ||
 				 (len < 6 && c_isdigit(c)))
 		{ // Numeric or sign only
 			command_line_buffer[len++] = c;
-			c_putch(c);
+			putchar(c);
 		}
 	}
 	newline();
@@ -485,8 +486,8 @@ unsigned char convert_token_to_icode()
 				return 0;
 			}
 			icode_conversion_buffer[len++] = I_NUM;
-			icode_conversion_buffer[len++] = value & 255;
-			icode_conversion_buffer[len++] = value >> 8;
+			icode_conversion_buffer[len++] = value & MAX_BYTE_VALUE;
+			icode_conversion_buffer[len++] = value >> BITS_IN_BYTE;
 			character_in_line_buffer_pointer = top_of_command_line;
 		}
 		else if (*character_in_line_buffer_pointer == '\"' || *character_in_line_buffer_pointer == '\'') // Try string conversion
@@ -541,7 +542,7 @@ short get_line_number_by_line_pointer(unsigned char *line_pointer)
 {
 	if (*line_pointer == 0) // end of list
 		return 32767;		// max line bumber
-	return *(line_pointer + 1) | *(line_pointer + 2) << 8;
+	return *(line_pointer + 1) | *(line_pointer + 2) << BITS_IN_BYTE;
 }
 
 // Search line by line number
@@ -625,14 +626,14 @@ void listing_1_line_of_icode(unsigned char *ip)
 		{
 			c_puts(keyword_table[*ip]);
 			if (!nospacea(*ip))
-				c_putch(' ');
+				putchar(' ');
 			if (*ip == I_REM)
 			{
 				ip++;
 				i = *ip++;
 				while (i--)
 				{
-					c_putch(*ip++);
+					putchar(*ip++);
 				}
 				return;
 			}
@@ -641,17 +642,17 @@ void listing_1_line_of_icode(unsigned char *ip)
 		else if (*ip == I_NUM) // Case numeric
 		{
 			ip++;
-			print_numeric_specified_columns(*ip | *(ip + 1) << 8, 0);
+			print_numeric_specified_columns(*ip | *(ip + 1) << BITS_IN_BYTE, 0);
 			ip += 2;
 			if (!nospaceb(*ip))
-				c_putch(' ');
+				putchar(' ');
 		}
 		else if (*ip == I_VAR) // Case variable
 		{
 			ip++;
-			c_putch(*ip++ + 'A');
+			putchar(*ip++ + 'A');
 			if (!nospaceb(*ip))
-				c_putch(' ');
+				putchar(' ');
 		}
 		else if (*ip == I_STR) // Case string
 		{
@@ -666,15 +667,15 @@ void listing_1_line_of_icode(unsigned char *ip)
 					break;
 				}
 
-			c_putch(c);
+			putchar(c);
 			i = *ip++;
 			while (i--)
 			{
-				c_putch(*ip++);
+				putchar(*ip++);
 			}
-			c_putch(c);
+			putchar(c);
 			if (*ip == I_VAR)
-				c_putch(' ');
+				putchar(' ');
 		}
 
 		else // Nothing match, I think, such case is impossible
@@ -719,7 +720,7 @@ short i_get_value()
 	{
 	case I_NUM:
 		current_icode++;
-		value = *current_icode | *(current_icode + 1) << 8;
+		value = *current_icode | *(current_icode + 1) << BITS_IN_BYTE;
 		current_icode += 2;
 		break;
 	case I_PLUS:
@@ -905,7 +906,7 @@ void i_print_handler()
 			current_icode++;
 			i = *current_icode++;
 			while (i--)
-				c_putch(*current_icode++);
+				putchar(*current_icode++);
 			break;
 		case I_SHARP:
 			current_icode++;
@@ -956,7 +957,7 @@ void i_input_handler()
 			current_icode++;
 			i = *current_icode++;
 			while (i--)
-				c_putch(*current_icode++);
+				putchar(*current_icode++);
 			prompt = 0;
 		}
 
@@ -966,8 +967,8 @@ void i_input_handler()
 			current_icode++;
 			if (prompt)
 			{
-				c_putch(*current_icode + 'A');
-				c_putch(':');
+				putchar(*current_icode + 'A');
+				putchar(':');
 			}
 			value = input_numeric_and_return_value();
 			if (err)
@@ -1097,7 +1098,7 @@ unsigned char *i_execute_a_series_of_icode()
 	{
 
 		if (c_kbhit()) // check keyin
-			if (c_getch() == 27)
+			if (getchar() == 27)
 			{ // ESC ?
 				err = ERR_ESC;
 				return NULL;
@@ -1350,7 +1351,7 @@ void i_list_handler()
 	while (*current_line)
 	{
 		print_numeric_specified_columns(get_line_number_by_line_pointer(current_line), 0);
-		c_putch(' ');
+		putchar(' ');
 		listing_1_line_of_icode(current_line + 3);
 		if (err)
 			break;
@@ -1414,7 +1415,7 @@ void error()
 			newline();
 			c_puts("LINE:");
 			print_numeric_specified_columns(get_line_number_by_line_pointer(current_line), 0);
-			c_putch(' ');
+			putchar(' ');
 			listing_1_line_of_icode(current_line + 3);
 		}
 		else
@@ -1450,7 +1451,7 @@ void basic()
 	// Input 1 line and execute
 	while (1)
 	{
-		c_putch('>');					// Prompt
+		putchar('>');					// Prompt
 		c_gets();						// Input 1 line
 		len = convert_token_to_icode(); // Convert token to i-code
 		if (err)
